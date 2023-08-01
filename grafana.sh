@@ -83,31 +83,6 @@ random_string() {
     )
 }
 
-
-get_binding_service() {
-    local binding_name="${1}"
-    jq --arg b "${binding_name}" '.[][] | select(.binding_name == $b)' <<<"${VCAP_SERVICES}"
-}
-
-
-get_db_vcap_service() {
-    local binding_name="${1}"
-
-    if [[ -z "${binding_name}" ]] || [[ "${binding_name}" == "null" ]]
-    then
-        # search for a sql service looking at the label
-        jq '[.[][] | select(.credentials.uri) | select(.credentials.uri | split(":")[0] == ("mysql","postgres","postgresql"))] | first | select (.!=null)' <<<"${VCAP_SERVICES}"
-    else
-        get_binding_service "${binding_name}"
-    fi
-}
-
-
-get_db_vcap_service_type() {
-    local db="${1}"
-    jq -r '.credentials.uri | split(":")[0]' <<<"${db}"
-}
-
 get_influxdb_vcap_service() {
     jq '[.[][] | select(.label=="csb-aws-influxdb") ] | first | select (.!=null)' <<<"${VCAP_SERVICES}"
 }
@@ -138,61 +113,18 @@ set_env_DB() {
     local uri=""
 
     DB_TYPE=$(get_db_vcap_service_type "${db}")
-    if [[ $DB_TYPE == "postgresql" ]]
-    then
-	DB_TYPE="postgres"
-    fi
-
-    uri="${DB_TYPE}://"
-    if ! DB_USER=$(jq -r -e '.credentials.Username' <<<"${db}")
-    then
-        DB_USER=$(jq -r -e '.credentials.uri |
-            split("://")[1] | split(":")[0]' <<<"${db}") || DB_USER=''
-    fi
-    uri="${uri}${DB_USER}"
-    if ! DB_PASS=$(jq -r -e '.credentials.Password' <<<"${db}")
-    then
-        DB_PASS=$(jq -r -e '.credentials.uri |
-            split("://")[1] | split(":")[1] |
-            split("@")[0]' <<<"${db}") || DB_PASS=''
-    fi
-    uri="${uri}:${DB_PASS}"
-    if ! DB_HOST=$(jq -r -e '.credentials.host' <<<"${db}")
-    then
-        DB_HOST=$(jq -r -e '.credentials.uri |
-            split("://")[1] | split(":")[1] |
-            split("@")[1] |
-            split("/")[0]' <<<"${db}") || DB_HOST=''
-    fi
-    uri="${uri}@${DB_HOST}"
-    if [[ "${DB_TYPE}" == "mysql" ]]
-    then
-        DB_PORT="3306"
-        uri="${uri}:${DB_PORT}"
-        DB_TLS="false"
-    elif [[ "${DB_TYPE}" == "postgres" ]]
-    then
-        DB_PORT="5432"
-        uri="${uri}:${DB_PORT}"
-        DB_TLS="disable"
-    fi
-    if ! DB_NAME=$(jq -r -e '.credentials.database_name' <<<"${db}")
-    then
-        DB_NAME=$(jq -r -e '.credentials.uri |
-            split("://")[1] | split("/")[1] |
-            split("?")[0]' <<<"${db}") || DB_NAME=''
-    fi
-    uri="${uri}/${DB_NAME}"
+    DB_USER=$(get_db_username "${db}")
+    DB_PASS=$(get_db_password "${db}")
+    DB_HOST=$(get_db_host "${db}")
+    DB_PORT=$(get_db_port "${DB_TYPE}")
+    DB_NAME=$(get_db_name "${db}")
+    uri="${DB_TYPE}://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
     # TLS
-    mkdir -p ${AUTH_ROOT}
-    if jq -r -e '.credentials.ClientCert' <<<"${db}" >/dev/null
+    DB_CA_CERT=$(create_ca_cert "${db}" "${DB_NAME}" "${AUTH_ROOT}")
+    DB_CLIENT_CERT=$(create_client_cert "${db}" "${DB_NAME}" "${AUTH_ROOT}")
+    DB_CLIENT_KEY=$(create_client_key "${db}" "${DB_NAME}" "${AUTH_ROOT}")
+    if [[ ! -z "${DB_CLIENT_CERT}" ]]
     then
-        jq -r '.credentials.CaCert' <<<"${db}" > "${AUTH_ROOT}/${DB_NAME}-ca.crt"
-        jq -r '.credentials.ClientCert' <<<"${db}" > "${AUTH_ROOT}/${DB_NAME}-client.crt"
-        jq -r '.credentials.ClientKey' <<<"${db}" > "${AUTH_ROOT}/${DB_NAME}-client.key"
-        DB_CA_CERT="${AUTH_ROOT}/${DB_NAME}-ca.crt"
-        DB_CLIENT_CERT="${AUTH_ROOT}/${DB_NAME}-client.crt"
-        DB_CLIENT_KEY="${AUTH_ROOT}/${DB_NAME}-client.key"
         if instance=$(jq -r -e '.credentials.instance_name' <<<"${db}")
         then
             DB_CERT_NAME="${instance}"
@@ -204,10 +136,12 @@ set_env_DB() {
             [[ "${DB_TYPE}" == "mysql" ]] && DB_TLS="true"
             [[ "${DB_TYPE}" == "postgres" ]] && DB_TLS="verify-full"
         else
-            DB_CERT_NAME=""
             [[ "${DB_TYPE}" == "mysql" ]] && DB_TLS="skip-verify"
             [[ "${DB_TYPE}" == "postgres" ]] && DB_TLS="require"
         fi
+    else
+      [[ "${DB_TYPE}" == "mysql" ]] && DB_TLS="false"
+      [[ "${DB_TYPE}" == "postgres" ]] && DB_TLS="disable"
     fi
     echo "${uri}"
 }
@@ -398,7 +332,7 @@ set_datasources() {
   else
     for datasource_binding in ${DATASOURCE_BINDING_NAMES//,/ }; do
       echo "Retrieving binding service for ${datasource_binding}"
-      set_datasource "$(get_binding_service "${datasource_binding}")"
+      set_datasource "$(get_binding_service "${datasource_binding}" "${VCAP_SERVICES}")"
     done
   fi
 }
@@ -689,6 +623,7 @@ personalise_public_config() {
 
 ################################################################################
 
+source functions.sh
 personalise_public_config
 generate_alerts_from_templates
 pre_process ${GRAFANA_DASHBOARD_ROOT}
