@@ -6,9 +6,9 @@ BUILD_DIR=$(cd "$1/" && pwd)
 BUILDPACK_DIR=$(dirname $(readlink -f ${BASH_SOURCE%/*}))
 
 cp "${BUILDPACK_DIR}/grafana.sh" "${BUILD_DIR}/.grafana.sh"
-cp "${BUILDPACK_DIR}/functions.sh" "${BUILD_DIR}/functions.sh"
+cp -r "${BUILDPACK_DIR}/functions" "${BUILD_DIR}"
 chmod +x "${BUILD_DIR}/.grafana.sh"
-chmod +x "${BUILD_DIR}/functions.sh"
+chmod +x "${BUILD_DIR}/functions/*.sh"
 
 cat <<EOF
 ---
