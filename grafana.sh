@@ -114,7 +114,7 @@ set_env_DB() {
     local uri=""
 
     DB_TYPE=$(get_db_vcap_service_type "${db}")
-    DB_USER=$(get_db_username "${db}")
+    DB_USER=$(get_db_user "${db}")
     DB_PASS=$(get_db_password "${db}")
     DB_HOST=$(get_db_host "${db}")
     DB_PORT=$(get_db_port "${DB_TYPE}")
@@ -176,7 +176,6 @@ set_sql_databases() {
     reset_env_DB
 
     db=$(get_db_vcap_service "${VCAP_SERVICES}" "${DB_BINDING_NAME}")
-    echo "Have DB: ${db}"
     if [[ -n "${db}" ]]
     then
         set_env_DB "${db}"
