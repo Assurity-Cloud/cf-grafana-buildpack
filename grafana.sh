@@ -178,8 +178,8 @@ set_sql_databases() {
     db=$(get_db_vcap_service "${VCAP_SERVICES}" "${DB_BINDING_NAME}")
     if [[ -n "${db}" ]]
     then
-        set_env_DB "${db}"
-        set_DB_proxy "${db}"
+        set_env_DB "${db}" >/dev/null
+        set_DB_proxy "${db}" >/dev/null
     fi
 }
 
