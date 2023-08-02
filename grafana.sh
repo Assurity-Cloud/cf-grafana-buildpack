@@ -175,7 +175,7 @@ set_sql_databases() {
     echo "Initializing DB settings from service instances ..."
     reset_env_DB
 
-    db=$(get_db_vcap_service "${DB_BINDING_NAME}")
+    db=$(get_db_vcap_service "${VCAP_SERVICES}" "${DB_BINDING_NAME}")
     echo "Have DB: ${db}"
     if [[ -n "${db}" ]]
     then
