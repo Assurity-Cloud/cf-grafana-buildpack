@@ -120,19 +120,21 @@ set_env_DB() {
     DB_PORT=$(get_db_port "${DB_TYPE}")
     DB_NAME=$(get_db_name "${db}")
     uri="${DB_TYPE}://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+    echo "${uri}"
     # TLS
     DB_CA_CERT=$(create_ca_cert "${db}" "${DB_NAME}" "${AUTH_ROOT}")
     DB_CLIENT_CERT=$(create_client_cert "${db}" "${DB_NAME}" "${AUTH_ROOT}")
     DB_CLIENT_KEY=$(create_client_key "${db}" "${DB_NAME}" "${AUTH_ROOT}")
+    echo have certs
     if is_google_service "${db}"
     then
       DB_TLS="$(get_google_db_tls "${db}" "${DB_TYPE}" "${DB_CLIENT_CERT}")"
       DB_CERT_NAME="$(get_google_db_cert_name "${db}" "${DB_CLIENT_CERT}")"
     elif is_aws_service "${db}"
     then
+      echo is aws service
       DB_TLS="$(get_aws_db_tls "${DB_TYPE}" "${DB_CA_CERT}")"
     fi
-    echo "${uri}"
 }
 
 # Given a DB from vcap services, defines the proxy files ${DB_NAME}-auth.json and
