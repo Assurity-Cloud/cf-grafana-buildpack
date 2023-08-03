@@ -124,25 +124,13 @@ set_env_DB() {
     DB_CA_CERT=$(create_ca_cert "${db}" "${DB_NAME}" "${AUTH_ROOT}")
     DB_CLIENT_CERT=$(create_client_cert "${db}" "${DB_NAME}" "${AUTH_ROOT}")
     DB_CLIENT_KEY=$(create_client_key "${db}" "${DB_NAME}" "${AUTH_ROOT}")
-    if [[ ! -z "${DB_CLIENT_CERT}" ]]
+    if is_google_service "${db}"
     then
-        if instance=$(jq -r -e '.credentials.instance_name' <<<"${db}")
-        then
-            DB_CERT_NAME="${instance}"
-            if project=$(jq -r -e '.credentials.ProjectId' <<<"${db}")
-            then
-                # Google GCP format
-                DB_CERT_NAME="${project}:${instance}"
-            fi
-            [[ "${DB_TYPE}" == "mysql" ]] && DB_TLS="true"
-            [[ "${DB_TYPE}" == "postgres" ]] && DB_TLS="verify-full"
-        else
-            [[ "${DB_TYPE}" == "mysql" ]] && DB_TLS="skip-verify"
-            [[ "${DB_TYPE}" == "postgres" ]] && DB_TLS="require"
-        fi
-    else
-      [[ "${DB_TYPE}" == "mysql" ]] && DB_TLS="false"
-      [[ "${DB_TYPE}" == "postgres" ]] && DB_TLS="disable"
+      DB_TLS="$(get_google_db_tls "${db}" "${DB_TYPE}" "${DB_CLIENT_CERT}")"
+      DB_CERT_NAME="$(get_google_db_cert_name "${db}" "${DB_CLIENT_CERT}")"
+    elif is_aws_service "${db}"
+    then
+      DB_TLS="$(get_aws_db_tls "${DB_TYPE}" "${DB_CA_CERT}")"
     fi
     echo "${uri}"
 }

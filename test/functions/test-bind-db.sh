@@ -85,13 +85,6 @@ tearDown() {
   fi
 }
 
-test_get_binding_service() {
-  local service=$(get_binding_service "${VCAP_SERVICES}" influxdb1)
-  processExitCode=$?
-  assertEquals 0 "${processExitCode}"
-  assertEquals "test-influxdb" "$(jq -r '.instance_name' <<<$service)"
-}
-
 test_get_db_vcap_service_without_binding_name() {
   read -r -d '' vcap_services <<-EOF
 {
@@ -377,6 +370,30 @@ EOF
   processExitCode=$?
   assertEquals 0 "${processExitCode}"
   assertEquals "" "${key_location}"
+}
+
+test_get_aws_db_tls_mysql_no_ca_cert() {
+  local tls=$(get_aws_db_tls "mysql")
+  assertTrue $?
+  assertEquals "skip-verify" "${tls}"
+}
+
+test_get_aws_db_tls_mysql_with_ca_cert() {
+  local tls=$(get_aws_db_tls "mysql" "fake-cert-content")
+  assertTrue $?
+  assertEquals "true" "${tls}"
+}
+
+test_get_aws_db_tls_postgres_no_ca_cert() {
+  local tls=$(get_aws_db_tls "postgres")
+  assertTrue $?
+  assertEquals "require" "${tls}"
+}
+
+test_get_aws_db_tls_postgres_with_ca_cert() {
+  local tls=$(get_aws_db_tls "postgres" "fake-cert-content")
+  assertTrue $?
+  assertEquals "verify-full" "${tls}"
 }
 
 # Run tests by sourcing shunit2

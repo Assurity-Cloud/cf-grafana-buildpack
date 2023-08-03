@@ -89,12 +89,24 @@ get_db_port() {
   echo $db_port
 }
 
+get_ca_cert() {
+  echo "$(jq -r '.credentials.CaCert' <<< "${1}")"
+}
+
+get_client_cert() {
+  echo "$(jq -r '.credentials.ClientCert' <<< "${1}")"
+}
+
+get_client_key() {
+  echo "$(jq -r '.credentials.ClientKey' <<< "${1}")"
+}
+
 create_ca_cert() {
   local db=${1}
   local db_name=${2}
   local auth_root=${3}
   local db_ca_cert=""
-  local cert_val="$(jq -r '.credentials.CaCert' <<< "${db}")"
+  local cert_val="$(get_ca_cert "${db}")"
 
   if [[ -n "${cert_val}" && "${cert_val}" != "null" ]]
   then
@@ -112,7 +124,7 @@ create_client_cert() {
   local db_name=${2}
   local auth_root=${3}
   local db_client_cert=""
-  local cert_val="$(jq -r '.credentials.ClientCert' <<< "${db}")"
+  local cert_val="$(get_client_cert "${db}")"
 
   if [[ -n "${cert_val}" && "${cert_val}" != "null" ]]
   then
@@ -129,7 +141,7 @@ create_client_key() {
   local db_name=${2}
   local auth_root=${3}
   local db_client_key=""
-  local key_val="$(jq -r '.credentials.ClientKey' <<< "${db}")"
+  local key_val="$(get_client_key "${db}")"
 
   if [[ -n "${key_val}" && "${key_val}" != "null" ]]
   then
@@ -139,4 +151,60 @@ create_client_key() {
   fi
 
   echo "${db_client_key}"
+}
+
+get_aws_db_tls() {
+  local db_type=${1}
+  local db_ca_cert=${2:-""}
+
+  if [[ -n "${db_ca_cert}" ]]
+  then
+      [[ "${db_type}" == "mysql" ]] && echo "true"
+      [[ "${db_type}" == "postgres" ]] && echo "verify-full"
+  else
+      [[ "${db_type}" == "mysql" ]] && echo "skip-verify"
+      [[ "${db_type}" == "postgres" ]] && echo "require"
+  fi
+}
+
+get_google_db_tls() {
+  local db=${1}
+  local db_type=${2}
+  local db_client_cert=${3}
+
+  if [[ ! -z "${db_client_cert}" ]]
+  then
+    if instance=$(jq -r -e '.credentials.instance_name' <<<"${db}")
+    then
+      [[ "${db_type}" == "mysql" ]] && echo "true"
+      [[ "${db_type}" == "postgres" ]] && echo "verify-full"
+    else
+      [[ "${db_type}" == "mysql" ]] && echo "skip-verify"
+      [[ "${db_type}" == "postgres" ]] && echo "require"
+    fi
+  else
+    [[ "${db_type}" == "mysql" ]] && echo "false"
+    [[ "${db_type}" == "postgres" ]] && echo "disable"
+  fi
+}
+
+get_google_db_cert_name() {
+  local db=${1}
+  local db_client_cert=${2}
+  local db_cert_name=""
+
+  if [[ ! -z "${db_client_cert}" ]]
+  then
+    if instance=$(jq -r -e '.credentials.instance_name' <<<"${db}")
+    then
+      db_cert_name="${instance}"
+      if project=$(jq -r -e '.credentials.ProjectId' <<<"${db}")
+      then
+        # Google GCP format
+        db_cert_name="${project}:${instance}"
+      fi
+    fi
+  fi
+
+  echo "${db_cert_name}"
 }
