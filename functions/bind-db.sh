@@ -229,7 +229,7 @@ get_db_tls() {
 }
 
 
-get_cert_name() {
+get_db_cert_name() {
   local db=${1}
   local db_cert_name=""
 
