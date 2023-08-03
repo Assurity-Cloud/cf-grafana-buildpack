@@ -13,6 +13,8 @@ setUp() {
       "binding_guid": "a49fe2e5-3f7a-4d55-94e2-07cd4d345e96",
       "binding_name": "mysql1",
       "credentials": {
+        "certificate_authority": "-----BEGIN CERTIFICATE-----Someteststuff-----END CERTIFICATE-----",
+        "certificate_authority_url": "https://truststore.pki.rds.amazonaws.com/region/region-bundle.pem",
         "database": "test_db",
         "hostname": "test-db1.test-region.rds.amazonaws.com",
         "jdbcUrl": "jdbc:mysql://test-db1.test-region.rds.amazonaws.com:3306/test_db?user=test-user&password=test-pw&useSSL=true",
@@ -313,7 +315,26 @@ test_get_db_port_postgres() {
   assertEquals "5432" "${db_port}"
 }
 
-test_create_ca_cert() {
+test_get_ca_filename() {
+  local ca_filename=$(get_ca_filename "${AURORA_MYSQL}")
+  assertTrue $?
+  assertEquals "region-bundle.pem" "${ca_filename}"
+}
+
+test_get_ca_filename_no_ca_url() {
+  read -r -d '' service <<-EOF
+{
+  "credentials": {
+    "CaCert": "myca"
+  }
+}
+EOF
+  local ca_filename=$(get_ca_filename "${service}")
+  assertTrue $?
+  assertEquals "" "${ca_filename}"
+}
+
+test_create_ca_cert_google() {
   read -r -d '' service <<-EOF
 {
   "credentials": {
@@ -326,6 +347,13 @@ EOF
   assertEquals 0 "${processExitCode}"
   assertEquals "${APP_ROOT}/mydb-ca.crt" "${key_location}"
   assertEquals "myca" "$(cat "${key_location}")"
+}
+
+test_create_ca_cert_aws() {
+  local key_location=$(create_ca_cert "${AURORA_MYSQL}" mydb "${APP_ROOT}")
+  assertTrue $?
+  assertEquals "${APP_ROOT}/region-bundle.pem" "${key_location}"
+  assertEquals "-----BEGIN CERTIFICATE-----Someteststuff-----END CERTIFICATE-----" "$(cat "${key_location}")"
 }
 
 test_create_client_cert() {
@@ -399,7 +427,7 @@ test_get_aws_db_tls_postgres_with_ca_cert() {
 test_get_db_tls() {
   local tls=$(get_db_tls "${AURORA_MYSQL}")
   assertTrue $?
-  assertEquals "skip-verify" "${tls}"
+  assertEquals "true" "${tls}"
 }
 
 # Run tests by sourcing shunit2
