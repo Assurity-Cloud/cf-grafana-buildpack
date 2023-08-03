@@ -137,8 +137,7 @@ set_DB_proxy() {
     # If it is a google service, setup proxy by creating 2 files: auth.json and
     # cloudsql proxy configuration on ${DB_NAME}.proxy
     # It will also overwrite the variables to point to localhost
-    if jq -r -e '.tags | contains(["gcp"])' <<<"${db}" >/dev/null
-    then
+    if is_google_service "${db}"; then
         jq -r '.credentials.PrivateKeyData' <<<"${db}" | base64 -d > "${AUTH_ROOT}/${DB_NAME}-auth.json"
         proxy=$(jq -r '.credentials.ProjectId + ":" + .credentials.region + ":" + .credentials.instance_name' <<<"${db}")
         echo "${proxy}=tcp:${DB_PORT}" > "${AUTH_ROOT}/${DB_NAME}.proxy"
