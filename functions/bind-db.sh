@@ -177,28 +177,14 @@ create_client_key() {
   echo "${db_client_key}"
 }
 
-get_aws_db_tls() {
+calculate_db_tls() {
   local db_type=${1}
-  local db_ca_cert=${2:-""}
+  local cert=${2:-""}
+  local db_cert_name=${3:-""}
 
-  if [[ -n "${db_ca_cert}" ]]
+  if [[ -n "${cert}"  ]]
   then
-      [[ "${db_type}" == "mysql" ]] && echo "skip-verify"
-      [[ "${db_type}" == "postgres" ]] && echo "require"
-  else
-      [[ "${db_type}" == "mysql" ]] && echo "false"
-      [[ "${db_type}" == "postgres" ]] && echo "disable"
-  fi
-}
-
-get_google_db_tls() {
-  local db=${1}
-  local db_type=${2}
-  local db_client_cert=${3}
-
-  if [[ -n "${db_client_cert}"  ]]
-  then
-    if instance=$(jq -r -e '.credentials.instance_name' <<<"${db}")
+    if [[ -n "${db_cert_name}" ]]
     then
       [[ "${db_type}" == "mysql" ]] && echo "true"
       [[ "${db_type}" == "postgres" ]] && echo "verify-full"
@@ -212,40 +198,20 @@ get_google_db_tls() {
   fi
 }
 
-get_google_db_cert_name() {
-  local db=${1}
-  local db_client_cert=${2}
-  local db_cert_name=""
-
-  if [[ -n "${db_client_cert}" ]]
-  then
-    if instance=$(jq -r -e '.credentials.instance_name' <<<"${db}")
-    then
-      db_cert_name="${instance}"
-      if project=$(jq -r -e '.credentials.ProjectId' <<<"${db}")
-      then
-        # Google GCP format
-        db_cert_name="${project}:${instance}"
-      fi
-    fi
-  fi
-
-  echo "${db_cert_name}"
-}
-
 get_db_tls() {
   local db=${1}
   local db_tls=""
 
   local db_type="$(get_db_vcap_service_type "${db}")"
+  local db_cert_name="$(get_db_cert_name "${db}")"
 
   if is_google_service "${db}"; then
     local client_cert="$(get_client_cert "${db}")"
-    db_tls="$(get_google_db_tls "${db}" "${db_type}" "${client_cert}")"
+    db_tls="$(calculate_db_tls "${db_type}" "${db_cert_name}" "${client_cert}")"
 
   elif is_aws_service "${db}"; then
     local ca_cert="$(get_ca_cert "${db}")"
-    db_tls="$(get_aws_db_tls "${db_type}" "${ca_cert}")"
+    db_tls="$(calculate_db_tls "${db_type}" "${db_cert_name}" "${ca_cert}")"
   fi
 
   echo "${db_tls}"
@@ -253,10 +219,14 @@ get_db_tls() {
 
 get_db_cert_name() {
   local db=${1}
-  local db_cert_name=""
 
-  if is_google_service "${db}"; then
-    db_cert_name="$(get_google_db_cert_name "${db}" "$(get_client_cert "${db}")")"
+  db_cert_name="$(jq -r -e '.credentials.instance_name' <<<"${db}")" ||
+    db_cert_name="$(jq -r -e '.credentials.hostname' <<<"${db}")" ||
+    db_cert_name=""
+  project="$(jq -r -e '.credentials.ProjectId' <<<"${db}")" || project=""
+
+  if [[ -n "${db_cert_name}" && -n "${project}" ]]; then
+    db_cert_name="${project}:${db_cert_name}"
   fi
 
   echo "${db_cert_name}"

@@ -400,34 +400,79 @@ EOF
   assertEquals "" "${key_location}"
 }
 
-test_get_aws_db_tls_mysql_no_ca_cert() {
-  local tls=$(get_aws_db_tls "mysql")
+test_calculate_db_tls_mysql_no_cert() {
+  local tls=$(calculate_db_tls "mysql")
   assertTrue $?
   assertEquals "false" "${tls}"
 }
 
-test_get_aws_db_tls_mysql_with_ca_cert() {
-  local tls=$(get_aws_db_tls "mysql" "fake-cert-content")
+test_calculate_db_tls_mysql_with_cert() {
+  local tls=$(calculate_db_tls "mysql" "fake-cert-content")
   assertTrue $?
   assertEquals "skip-verify" "${tls}"
 }
 
-test_get_aws_db_tls_postgres_no_ca_cert() {
-  local tls=$(get_aws_db_tls "postgres" "")
+test_calculate_db_tls_mysql_with_cert_and_hostname() {
+  local tls=$(calculate_db_tls "mysql" "fake-cert-content" "host")
+  assertTrue $?
+  assertEquals "true" "${tls}"
+}
+
+test_calculate_db_tls_postgres_no_ca_cert() {
+  local tls=$(calculate_db_tls "postgres" "")
   assertTrue $?
   assertEquals "disable" "${tls}"
 }
 
-test_get_aws_db_tls_postgres_with_ca_cert() {
-  local tls=$(get_aws_db_tls "postgres" "fake-cert-content")
+test_calculate_db_tls_postgres_with_ca_cert() {
+  local tls=$(calculate_db_tls "postgres" "fake-cert-content")
   assertTrue $?
   assertEquals "require" "${tls}"
+}
+
+test_calculate_db_tls_mysql_with_cert_and_hostname() {
+  local tls=$(calculate_db_tls "postgres" "fake-cert-content" "host")
+  assertTrue $?
+  assertEquals "verify-full" "${tls}"
 }
 
 test_get_db_tls() {
   local tls=$(get_db_tls "${AURORA_MYSQL}")
   assertTrue $?
-  assertEquals "skip-verify" "${tls}"
+  assertEquals "true" "${tls}"
+}
+
+test_get_aws_db_cert_name() {
+  local db_cert_name=$(get_db_cert_name "${AURORA_MYSQL}")
+  assertTrue $?
+  assertEquals "test-db1.test-region.rds.amazonaws.com" "${db_cert_name}"
+}
+
+test_get_google_cert_name_with_project() {
+  read -r -d '' service <<-EOF
+{
+  "credentials": {
+    "instance_name": "instance",
+    "ProjectId": "project"
+  }
+}
+EOF
+  local db_cert_name=$(get_db_cert_name "${service}")
+  assertTrue $?
+  assertEquals "project:instance" "${db_cert_name}"
+}
+
+test_get_google_cert_name_no_project() {
+  read -r -d '' service <<-EOF
+{
+  "credentials": {
+    "instance_name": "instance"
+  }
+}
+EOF
+  local db_cert_name=$(get_db_cert_name "${service}")
+  assertTrue $?
+  assertEquals "instance" "${db_cert_name}"
 }
 
 # Run tests by sourcing shunit2
