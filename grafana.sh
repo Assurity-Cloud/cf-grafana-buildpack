@@ -132,7 +132,7 @@ set_env_DB() {
       DB_CERT_NAME="$(get_google_db_cert_name "${db}" "${DB_CLIENT_CERT}")"
     elif is_aws_service "${db}"
     then
-      echo is aws service
+      echo "get_aws_db_tls ${DB_TYPE} ${DB_CA_CERT}"
       DB_TLS="$(get_aws_db_tls "${DB_TYPE}" "${DB_CA_CERT}")"
     fi
 }
