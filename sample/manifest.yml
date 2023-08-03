@@ -6,7 +6,7 @@ applications:
   stack: cflinuxfs3
   random-route: true
   buildpacks:
-  - https://github.com/Assurity-Cloud/cf-grafana-buildpack#AP-2238/Add_RDS_to_Grafana
+  - https://github.com/Assurity-Cloud/cf-grafana-buildpack
   env:
     ADMIN_USER: admin
     ADMIN_PASS: admin
