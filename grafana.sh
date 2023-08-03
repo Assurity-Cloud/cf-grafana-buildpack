@@ -111,7 +111,6 @@ reset_env_DB() {
 
 set_env_DB() {
     local db="${1}"
-    local uri=""
 
     DB_TYPE=$(get_db_vcap_service_type "${db}")
     DB_USER=$(get_db_user "${db}")
@@ -119,23 +118,14 @@ set_env_DB() {
     DB_HOST=$(get_db_host "${db}")
     DB_PORT=$(get_db_port "${DB_TYPE}")
     DB_NAME=$(get_db_name "${db}")
-    uri="${DB_TYPE}://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
-    echo "${uri}"
     # TLS
     DB_CA_CERT=$(create_ca_cert "${db}" "${DB_NAME}" "${AUTH_ROOT}")
     DB_CLIENT_CERT=$(create_client_cert "${db}" "${DB_NAME}" "${AUTH_ROOT}")
     DB_CLIENT_KEY=$(create_client_key "${db}" "${DB_NAME}" "${AUTH_ROOT}")
-    echo have certs
-    if is_google_service "${db}"
-    then
-      DB_TLS="$(get_google_db_tls "${db}" "${DB_TYPE}" "${DB_CLIENT_CERT}")"
-      DB_CERT_NAME="$(get_google_db_cert_name "${db}" "${DB_CLIENT_CERT}")"
-    elif is_aws_service "${db}"
-    then
-      echo "get_aws_db_tls ${DB_TYPE} ${DB_CA_CERT}"
-      DB_TLS="$(get_aws_db_tls "${DB_TYPE}" "${DB_CA_CERT}")"
-      echo $DB_TLS
-    fi
+    DB_TLS=$(get_db_tls "${db}")
+    DB_CERT_NAME=$(get_db_cert_name "${db}")
+
+    echo "${DB_TYPE}://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 }
 
 # Given a DB from vcap services, defines the proxy files ${DB_NAME}-auth.json and

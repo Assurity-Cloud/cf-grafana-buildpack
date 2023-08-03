@@ -17,7 +17,8 @@ get_db_vcap_service() {
 
 get_db_vcap_service_type() {
   local db="${1}"
-  local db_type=$(jq -r '.credentials.uri | split(":")[0]' <<<"${db}")
+  db_type=$(jq -r -e '.tags[] | select((.=="mysql") or (.=="postgres") or (.=="postgresql"))' <<<"${db}") ||
+    db_type=$(jq -r '.credentials.uri | split(":")[0]' <<<"${db}")
 
   if [[ $db_type == "postgresql" ]]
   then
@@ -157,7 +158,7 @@ get_aws_db_tls() {
   local db_type=${1}
   local db_ca_cert=${2:-""}
 
-  if [[ -n "${db_ca_cert}" ]]
+  if [[ -n "${db_ca_cert}" && "${db_ca_cert}" != "null" ]]
   then
       [[ "${db_type}" == "mysql" ]] && echo "true"
       [[ "${db_type}" == "postgres" ]] && echo "verify-full"
@@ -172,7 +173,7 @@ get_google_db_tls() {
   local db_type=${2}
   local db_client_cert=${3}
 
-  if [[ ! -z "${db_client_cert}" ]]
+  if [[ -n "${db_client_cert}" && "${db_client_cert}" != "null"  ]]
   then
     if instance=$(jq -r -e '.credentials.instance_name' <<<"${db}")
     then
@@ -193,7 +194,7 @@ get_google_db_cert_name() {
   local db_client_cert=${2}
   local db_cert_name=""
 
-  if [[ ! -z "${db_client_cert}" ]]
+  if [[ -n "${db_client_cert}" && "${db_client_cert}" != "null" ]]
   then
     if instance=$(jq -r -e '.credentials.instance_name' <<<"${db}")
     then
@@ -204,6 +205,36 @@ get_google_db_cert_name() {
         db_cert_name="${project}:${instance}"
       fi
     fi
+  fi
+
+  echo "${db_cert_name}"
+}
+
+get_db_tls() {
+  local db=${1}
+  local db_tls=""
+
+  local db_type="$(get_db_vcap_service_type "${db}")"
+
+  if is_google_service "${db}"; then
+    local client_cert="$(get_client_cert "${db}")"
+    db_tls="$(get_google_db_tls "${db}" "${db_type}" "${client_cert}")"
+
+  elif is_aws_service "${db}"; then
+    local ca_cert="$(get_ca_cert "${db}")"
+    db_tls="$(get_aws_db_tls "${db_type}" "${ca_cert}")"
+  fi
+
+  echo "${db_tls}"
+}
+
+
+get_cert_name() {
+  local db=${1}
+  local db_cert_name=""
+
+  if is_google_service "${db}"; then
+    db_cert_name="$(get_google_db_cert_name "${db}" "$(get_client_cert "${db}")")"
   fi
 
   echo "${db_cert_name}"

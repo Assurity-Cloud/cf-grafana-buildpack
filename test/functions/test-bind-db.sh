@@ -396,5 +396,11 @@ test_get_aws_db_tls_postgres_with_ca_cert() {
   assertEquals "verify-full" "${tls}"
 }
 
+test_get_db_tls() {
+  local tls=$(get_db_tls "${AURORA_MYSQL}")
+  assertTrue $?
+  assertEquals "skip-verify" "${tls}"
+}
+
 # Run tests by sourcing shunit2
 source "${shunit2_location}"
