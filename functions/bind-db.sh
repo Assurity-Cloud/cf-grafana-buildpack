@@ -177,6 +177,21 @@ create_client_key() {
   echo "${db_client_key}"
 }
 
+get_db_cert_name() {
+  local db=${1}
+
+  db_cert_name="$(jq -r -e '.credentials.instance_name' <<<"${db}")" ||
+    db_cert_name="$(jq -r -e '.credentials.hostname' <<<"${db}")" ||
+    db_cert_name=""
+  project="$(jq -r -e '.credentials.ProjectId' <<<"${db}")" || project=""
+
+  if [[ -n "${db_cert_name}" && -n "${project}" ]]; then
+    db_cert_name="${project}:${db_cert_name}"
+  fi
+
+  echo "${db_cert_name}"
+}
+
 calculate_db_tls() {
   local db_type=${1}
   local cert=${2:-""}
@@ -215,19 +230,4 @@ get_db_tls() {
   fi
 
   echo "${db_tls}"
-}
-
-get_db_cert_name() {
-  local db=${1}
-
-  db_cert_name="$(jq -r -e '.credentials.instance_name' <<<"${db}")" ||
-    db_cert_name="$(jq -r -e '.credentials.hostname' <<<"${db}")" ||
-    db_cert_name=""
-  project="$(jq -r -e '.credentials.ProjectId' <<<"${db}")" || project=""
-
-  if [[ -n "${db_cert_name}" && -n "${project}" ]]; then
-    db_cert_name="${project}:${db_cert_name}"
-  fi
-
-  echo "${db_cert_name}"
 }
