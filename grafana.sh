@@ -134,6 +134,7 @@ set_env_DB() {
     then
       echo "get_aws_db_tls ${DB_TYPE} ${DB_CA_CERT}"
       DB_TLS="$(get_aws_db_tls "${DB_TYPE}" "${DB_CA_CERT}")"
+      echo $DB_TLS
     fi
 }
 

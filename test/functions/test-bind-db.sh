@@ -385,7 +385,7 @@ test_get_aws_db_tls_mysql_with_ca_cert() {
 }
 
 test_get_aws_db_tls_postgres_no_ca_cert() {
-  local tls=$(get_aws_db_tls "postgres")
+  local tls=$(get_aws_db_tls "postgres" "")
   assertTrue $?
   assertEquals "require" "${tls}"
 }
