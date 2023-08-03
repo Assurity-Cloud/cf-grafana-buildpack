@@ -403,31 +403,31 @@ EOF
 test_get_aws_db_tls_mysql_no_ca_cert() {
   local tls=$(get_aws_db_tls "mysql")
   assertTrue $?
-  assertEquals "skip-verify" "${tls}"
+  assertEquals "false" "${tls}"
 }
 
 test_get_aws_db_tls_mysql_with_ca_cert() {
   local tls=$(get_aws_db_tls "mysql" "fake-cert-content")
   assertTrue $?
-  assertEquals "true" "${tls}"
+  assertEquals "skip-verify" "${tls}"
 }
 
 test_get_aws_db_tls_postgres_no_ca_cert() {
   local tls=$(get_aws_db_tls "postgres" "")
   assertTrue $?
-  assertEquals "require" "${tls}"
+  assertEquals "disable" "${tls}"
 }
 
 test_get_aws_db_tls_postgres_with_ca_cert() {
   local tls=$(get_aws_db_tls "postgres" "fake-cert-content")
   assertTrue $?
-  assertEquals "verify-full" "${tls}"
+  assertEquals "require" "${tls}"
 }
 
 test_get_db_tls() {
   local tls=$(get_db_tls "${AURORA_MYSQL}")
   assertTrue $?
-  assertEquals "true" "${tls}"
+  assertEquals "skip-verify" "${tls}"
 }
 
 # Run tests by sourcing shunit2

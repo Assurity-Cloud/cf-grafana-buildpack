@@ -183,11 +183,11 @@ get_aws_db_tls() {
 
   if [[ -n "${db_ca_cert}" ]]
   then
-      [[ "${db_type}" == "mysql" ]] && echo "true"
-      [[ "${db_type}" == "postgres" ]] && echo "verify-full"
-  else
       [[ "${db_type}" == "mysql" ]] && echo "skip-verify"
       [[ "${db_type}" == "postgres" ]] && echo "require"
+  else
+      [[ "${db_type}" == "mysql" ]] && echo "false"
+      [[ "${db_type}" == "postgres" ]] && echo "disable"
   fi
 }
 
