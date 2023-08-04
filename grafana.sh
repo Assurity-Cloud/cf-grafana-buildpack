@@ -51,6 +51,9 @@ export DB_CLIENT_KEY=""
 export DB_CERT_NAME=""
 export DB_TLS=""
 
+source functions/generate-alerts.sh
+source functions/pre-process.sh
+source functions/bind-db.sh
 
 ###
 
@@ -76,36 +79,10 @@ launch() {
     return ${rvalue}
 }
 
-
 random_string() {
     (
         cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-32} | head -n 1 || true
     )
-}
-
-
-get_binding_service() {
-    local binding_name="${1}"
-    jq --arg b "${binding_name}" '.[][] | select(.binding_name == $b)' <<<"${VCAP_SERVICES}"
-}
-
-
-get_db_vcap_service() {
-    local binding_name="${1}"
-
-    if [[ -z "${binding_name}" ]] || [[ "${binding_name}" == "null" ]]
-    then
-        # search for a sql service looking at the label
-        jq '[.[][] | select(.credentials.uri) | select(.credentials.uri | split(":")[0] == ("mysql","postgres","postgresql"))] | first | select (.!=null)' <<<"${VCAP_SERVICES}"
-    else
-        get_binding_service "${binding_name}"
-    fi
-}
-
-
-get_db_vcap_service_type() {
-    local db="${1}"
-    jq -r '.credentials.uri | split(":")[0]' <<<"${db}"
 }
 
 get_influxdb_vcap_service() {
@@ -132,86 +109,24 @@ reset_env_DB() {
     DB_TLS=""
 }
 
-
 set_env_DB() {
     local db="${1}"
-    local uri=""
 
     DB_TYPE=$(get_db_vcap_service_type "${db}")
-    if [[ $DB_TYPE == "postgresql" ]]
-    then
-	DB_TYPE="postgres"
-    fi
-
-    uri="${DB_TYPE}://"
-    if ! DB_USER=$(jq -r -e '.credentials.Username' <<<"${db}")
-    then
-        DB_USER=$(jq -r -e '.credentials.uri |
-            split("://")[1] | split(":")[0]' <<<"${db}") || DB_USER=''
-    fi
-    uri="${uri}${DB_USER}"
-    if ! DB_PASS=$(jq -r -e '.credentials.Password' <<<"${db}")
-    then
-        DB_PASS=$(jq -r -e '.credentials.uri |
-            split("://")[1] | split(":")[1] |
-            split("@")[0]' <<<"${db}") || DB_PASS=''
-    fi
-    uri="${uri}:${DB_PASS}"
-    if ! DB_HOST=$(jq -r -e '.credentials.host' <<<"${db}")
-    then
-        DB_HOST=$(jq -r -e '.credentials.uri |
-            split("://")[1] | split(":")[1] |
-            split("@")[1] |
-            split("/")[0]' <<<"${db}") || DB_HOST=''
-    fi
-    uri="${uri}@${DB_HOST}"
-    if [[ "${DB_TYPE}" == "mysql" ]]
-    then
-        DB_PORT="3306"
-        uri="${uri}:${DB_PORT}"
-        DB_TLS="false"
-    elif [[ "${DB_TYPE}" == "postgres" ]]
-    then
-        DB_PORT="5432"
-        uri="${uri}:${DB_PORT}"
-        DB_TLS="disable"
-    fi
-    if ! DB_NAME=$(jq -r -e '.credentials.database_name' <<<"${db}")
-    then
-        DB_NAME=$(jq -r -e '.credentials.uri |
-            split("://")[1] | split("/")[1] |
-            split("?")[0]' <<<"${db}") || DB_NAME=''
-    fi
-    uri="${uri}/${DB_NAME}"
+    DB_USER=$(get_db_user "${db}")
+    DB_PASS=$(get_db_password "${db}")
+    DB_HOST=$(get_db_host "${db}")
+    DB_PORT=$(get_db_port "${DB_TYPE}")
+    DB_NAME=$(get_db_name "${db}")
     # TLS
-    mkdir -p ${AUTH_ROOT}
-    if jq -r -e '.credentials.ClientCert' <<<"${db}" >/dev/null
-    then
-        jq -r '.credentials.CaCert' <<<"${db}" > "${AUTH_ROOT}/${DB_NAME}-ca.crt"
-        jq -r '.credentials.ClientCert' <<<"${db}" > "${AUTH_ROOT}/${DB_NAME}-client.crt"
-        jq -r '.credentials.ClientKey' <<<"${db}" > "${AUTH_ROOT}/${DB_NAME}-client.key"
-        DB_CA_CERT="${AUTH_ROOT}/${DB_NAME}-ca.crt"
-        DB_CLIENT_CERT="${AUTH_ROOT}/${DB_NAME}-client.crt"
-        DB_CLIENT_KEY="${AUTH_ROOT}/${DB_NAME}-client.key"
-        if instance=$(jq -r -e '.credentials.instance_name' <<<"${db}")
-        then
-            DB_CERT_NAME="${instance}"
-            if project=$(jq -r -e '.credentials.ProjectId' <<<"${db}")
-            then
-                # Google GCP format
-                DB_CERT_NAME="${project}:${instance}"
-            fi
-            [[ "${DB_TYPE}" == "mysql" ]] && DB_TLS="true"
-            [[ "${DB_TYPE}" == "postgres" ]] && DB_TLS="verify-full"
-        else
-            DB_CERT_NAME=""
-            [[ "${DB_TYPE}" == "mysql" ]] && DB_TLS="skip-verify"
-            [[ "${DB_TYPE}" == "postgres" ]] && DB_TLS="require"
-        fi
-    fi
-    echo "${uri}"
-}
+    DB_CA_CERT=$(create_ca_cert "${db}" "${DB_NAME}" "${AUTH_ROOT}")
+    DB_CLIENT_CERT=$(create_client_cert "${db}" "${DB_NAME}" "${AUTH_ROOT}")
+    DB_CLIENT_KEY=$(create_client_key "${db}" "${DB_NAME}" "${AUTH_ROOT}")
+    DB_TLS=$(get_db_tls "${db}")
+    DB_CERT_NAME=$(get_db_cert_name "${db}")
 
+    echo "${DB_TYPE}://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+}
 
 # Given a DB from vcap services, defines the proxy files ${DB_NAME}-auth.json and
 # ${AUTH_ROOT}/${DB_NAME}.proxy
@@ -222,8 +137,7 @@ set_DB_proxy() {
     # If it is a google service, setup proxy by creating 2 files: auth.json and
     # cloudsql proxy configuration on ${DB_NAME}.proxy
     # It will also overwrite the variables to point to localhost
-    if jq -r -e '.tags | contains(["gcp"])' <<<"${db}" >/dev/null
-    then
+    if is_google_service "${db}"; then
         jq -r '.credentials.PrivateKeyData' <<<"${db}" | base64 -d > "${AUTH_ROOT}/${DB_NAME}-auth.json"
         proxy=$(jq -r '.credentials.ProjectId + ":" + .credentials.region + ":" + .credentials.instance_name' <<<"${db}")
         echo "${proxy}=tcp:${DB_PORT}" > "${AUTH_ROOT}/${DB_NAME}.proxy"
@@ -234,7 +148,6 @@ set_DB_proxy() {
     echo "${DB_TYPE}://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 }
 
-
 # Sets all DB
 set_sql_databases() {
     local db
@@ -242,7 +155,7 @@ set_sql_databases() {
     echo "Initializing DB settings from service instances ..."
     reset_env_DB
 
-    db=$(get_db_vcap_service "${DB_BINDING_NAME}")
+    db=$(get_db_vcap_service "${VCAP_SERVICES}" "${DB_BINDING_NAME}")
     if [[ -n "${db}" ]]
     then
         set_env_DB "${db}" >/dev/null
@@ -398,130 +311,8 @@ set_datasources() {
   else
     for datasource_binding in ${DATASOURCE_BINDING_NAMES//,/ }; do
       echo "Retrieving binding service for ${datasource_binding}"
-      set_datasource "$(get_binding_service "${datasource_binding}")"
+      set_datasource "$(get_binding_service "${datasource_binding}" "${VCAP_SERVICES}")"
     done
-  fi
-}
-
-replace_token_with_data() {
-  token=$1
-  data_pos=$2
-  data_file=$3
-  files_to_change=$4
-
-  replace_commands=$(cat ${data_file} | tail -n +2 | awk -F "," "{ print \"s/{${token}}/\" \$${data_pos} \"/g\"}")
-
-  replace_command_array=($replace_commands)
-  filename_array=($files_to_change)
-  filename_length=${#filename_array[@]}
-
-  for (( pos=0; pos<filename_length; pos++ )); do
-    filename="${filename_array[$pos]}"
-    replace_command="${replace_command_array[$pos]}"
-    echo "replace_command=${replace_command}, filename=${filename}"
-    sed -i -- "${replace_command}" "${filename}"
-  done
-}
-
-replace_headers_with_data() {
-  data_file=$1
-  files_to_change=$2
-
-  headers=$(head -n 1 ${data_file})
-  IFS=$','; header_array=($headers); unset IFS;
-  header_length=${#header_array[@]}
-
-  for (( header_pos=0; header_pos<header_length; header_pos++ )); do
-    header="${header_array[$header_pos]}"
-    echo "header=${header}"
-    replace_token_with_data "${header}" $((header_pos + 1)) "${data_file}" "${files_to_change}"
-  done
-}
-
-replace_placeholders_with_spaces() {
-  for filename in $1; do
-    sed -i -- 's/+/ /g' "${filename}"
-  done
-}
-
-merge_alert_template_files() {
-  base_file=$1
-  for filename in $2; do
-    echo '' >> "$base_file"
-    cat "$filename" >> "$base_file"
-    rm "$filename"
-    if [[ -f "${filename}--" ]]; then rm "${filename}--"; fi
-  done
-}
-
-generate_alerts_from_templates() {
-  template_dir=${GRAFANA_ALERTING_ROOT}/templates
-  if [[ -d ${template_dir} ]]; then
-
-    alert_groups_filename=${GRAFANA_ALERTING_ROOT}/alert-groups.yml
-    cat > ${alert_groups_filename} << EOF
-apiVersion: 1
-
-groups:
-EOF
-
-    pushd "${template_dir}"
-
-      for subdirectory in */; do
-
-        pushd "${subdirectory}"
-
-          if [ -f "group.yml.template" ]; then
-            cat "group.yml.template" >> ${alert_groups_filename}
-          fi
-
-          for template in rule-*.yml.template; do
-
-            alert_name="${template%.yml.template}"
-            alert_data_file="${alert_name}.csv"
-
-            if [ -f "$alert_data_file" ]; then
-              echo "creating alerts from template ${template} with data from ${alert_data_file}"
-
-              filenames=$(cat ${alert_data_file} | tail -n +2 | awk -F "," "{ print \"${GRAFANA_ALERTING_ROOT}/\" \$1 \"-${alert_name}.yml\" }")
-              for filename in $filenames; do
-                echo "creating alert file ${filename}"
-                cp "${template}" "${filename}"
-              done
-
-              replace_headers_with_data "${alert_data_file}" "${filenames}"
-              replace_placeholders_with_spaces "${filenames}"
-              merge_alert_template_files "${alert_groups_filename}" "${filenames}"
-
-            fi
-
-          done
-        popd
-      done
-
-    popd
-
-    fi
-}
-
-pre_process() {
-  local root_dir="${1}"
-  if [[ -d "${root_dir}/pre-process" ]]
-  then
-      for pre_process_config_file in "${root_dir}/pre-process/*.yml"
-      do
-          files_to_process=$(yq eval '.files_to_process' ${pre_process_config_file})
-
-          for replacement in $(yq eval -o=j -I=0 '.replacements[]' ${pre_process_config_file})
-          do
-              find=$(eval "echo $(echo $replacement | jq '.find')")
-              replace=$(eval "echo $(echo $replacement | jq '.replace')")
-
-              echo "Finding $find in ${root_dir}/${files_to_process} and replacing with $replace"
-              sed_command="s/$find/$replace/g"
-              sed -i -- $sed_command ${root_dir}/${files_to_process}
-          done
-      done
   fi
 }
 
