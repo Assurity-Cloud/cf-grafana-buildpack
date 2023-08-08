@@ -311,7 +311,7 @@ set_datasources() {
   else
     for datasource_binding in ${DATASOURCE_BINDING_NAMES//,/ }; do
       echo "Retrieving binding service for ${datasource_binding}"
-      set_datasource "$(get_binding_service "${datasource_binding}" "${VCAP_SERVICES}")"
+      set_datasource "$(get_binding_service "${VCAP_SERVICES}" "${datasource_binding}")"
     done
   fi
 }
