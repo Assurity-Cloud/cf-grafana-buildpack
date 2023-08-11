@@ -52,22 +52,53 @@ EOF
         "preview"
       ],
       "instance_guid": "22f79fd5-4e7d-4b4e-9a16-51e89e1f0ba0",
-      "instance_name": "test-influxdb",
+      "instance_name": "test-influxdb-1",
       "binding_guid": "4f7010ff-d6b5-4d50-8810-36d518616c87",
       "binding_name": "influxdb1",
       "credentials": {
-        "admin_password": "test_admin_pw",
-        "admin_username": "test_admin_user",
+        "admin_password": "REDACTED",
+        "admin_username": "REDACTED",
         "bound_databases": "[\"dbOne\", \"dbTwo\"]",
-        "databases": "[\"db\"]",
-        "default_database": "db",
-        "hostname": "test.csb.service",
-        "password": "test_pw",
+        "databases": "[\"dbOne\", \"dbTwo\"]",
+        "default_database": "dbOne",
+        "hostname": "test-influxdb1.csb.service",
+        "password": "test_pw1",
         "port": 443,
         "protocol": "HTTPS",
         "retention_policies": "{}",
-        "url": "HTTPS://test.csb.service:443",
-        "username": "test_user"
+        "url": "HTTPS://test-influxdb1.csb.service:443",
+        "username": "test_user_1"
+      },
+      "syslog_drain_url": null,
+      "volume_mounts": []
+    },
+    {
+      "label": "csb-aws-influxdb",
+      "provider": null,
+      "plan": "default",
+      "name": "influxdb2",
+      "tags": [
+        "aws",
+        "influxdb",
+        "preview"
+      ],
+      "instance_guid": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+      "instance_name": "test-influxdb-2",
+      "binding_guid": "1a5e9f43-2d9e-4b31-b72f-6b2c8b05e8d0",
+      "binding_name": "influxdb2",
+      "credentials": {
+        "admin_password": "REDACTED",
+        "admin_username": "REDACTED",
+        "bound_databases": "[\"dbThree\", \"dbFour\"]",
+        "databases": "[\"dbThree\", \"dbFour\"]",
+        "default_database": "dbThree",
+        "hostname": "test-influxdb2.csb.service",
+        "password": "test_pw2",
+        "port": 443,
+        "protocol": "HTTPS",
+        "retention_policies": "{}",
+        "url": "HTTPS://test-influxdb2.csb.service:443",
+        "username": "test_user_2"
       },
       "syslog_drain_url": null,
       "volume_mounts": []
