@@ -252,9 +252,9 @@ get_datasources_object() {
 
   binding_name=$(jq -r '.binding_name' <<<"${datasource}")
   databases=$(jq -r '.credentials.bound_databases' <<<"${datasource}")
-  url="$(echo ${influxdb_datasource} | jq -r '.credentials.url')"
-  username="$(echo ${influxdb_datasource} | jq -r '.credentials.username')"
-  password="$(echo ${influxdb_datasource} | jq -r '.credentials.password')"
+  url="$(echo ${datasource} | jq -r '.credentials.url')"
+  username="$(echo ${datasource} | jq -r '.credentials.username')"
+  password="$(echo ${datasource} | jq -r '.credentials.password')"
 
   jq -r '.[]' <<< "${databases}" | while read -r database; do
     cat <<EOF
