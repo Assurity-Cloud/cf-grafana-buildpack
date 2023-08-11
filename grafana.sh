@@ -185,6 +185,9 @@ datasources:
 $(get_datasources_object "${datasource}" "${orgId}")
 EOF
   fi
+
+  echo "catting file... ${APP_ROOT}/datasources/${name}.yml"
+  cat "${APP_ROOT}/datasources/${name}.yml"
 }
 
 set_vcap_datasource_prometheus() {
