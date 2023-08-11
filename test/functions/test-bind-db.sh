@@ -58,7 +58,7 @@ EOF
       "credentials": {
         "admin_password": "test_admin_pw",
         "admin_username": "test_admin_user",
-        "bound_database": "db",
+        "bound_databases": "[\"dbOne\", \"dbTwo\"]",
         "databases": "[\"db\"]",
         "default_database": "db",
         "hostname": "test.csb.service",
@@ -473,6 +473,60 @@ EOF
   local db_cert_name=$(get_db_cert_name "${service}")
   assertTrue $?
   assertEquals "instance" "${db_cert_name}"
+}
+
+
+
+test_get_delete_datasources_object() {
+  datasource_binding="influxdb1"
+  influxdb_datasource=$(get_binding_service "${VCAP_SERVICES}" "${datasource_binding}")
+
+  read -r -d '' expected_delete_datasources <<-EOF
+- name: dbOne
+  orgId: 1
+- name: dbTwo
+  orgId: 1
+EOF
+
+  actual_delete_datasources=$(get_delete_datasources_object "${influxdb_datasource}" "1")
+  assertTrue $?
+  assertEquals "${expected_delete_datasources}" "${actual_delete_datasources}"
+}
+
+
+test_get_datasources_object() {
+  datasource_binding="influxdb1"
+  influxdb_datasource=$(get_binding_service "${VCAP_SERVICES}" "${datasource_binding}")
+
+  binding_name="$(echo ${influxdb_datasource} | jq -r '.binding_name')"
+  expected_url="$(echo ${influxdb_datasource} | jq -r '.credentials.url')"
+  expected_username="$(echo ${influxdb_datasource} | jq -r '.credentials.username')"
+  expected_password="$(echo ${influxdb_datasource} | jq -r '.credentials.password')"
+
+  read -r -d '' expected_datasources <<-EOF
+- name: ${binding_name}-dbOne
+  type: influxdb
+  access: proxy
+  url: ${expected_url}
+  database: dbOne
+  user: ${expected_username}
+  orgId: 1
+  secureJsonData:
+    password: ${expected_password}
+- name: ${binding_name}-dbTwo
+  type: influxdb
+  access: proxy
+  url: ${expected_url}
+  database: dbTwo
+  user: ${expected_username}
+  orgId: 1
+  secureJsonData:
+    password: ${expected_password}
+EOF
+
+  actual_datasources=$(get_datasources_object "${influxdb_datasource}" "1")
+  assertTrue $?
+  assertEquals "${expected_datasources}" "${actual_datasources}"
 }
 
 # Run tests by sourcing shunit2

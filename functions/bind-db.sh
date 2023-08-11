@@ -231,3 +231,43 @@ get_db_tls() {
 
   echo "${db_tls}"
 }
+
+get_delete_datasources_object() {
+  local datasource=${1}
+  local orgId=${2}
+
+  databases=$(jq -r '.credentials.bound_databases' <<<"${datasource}")
+
+  jq -r '.[]' <<< "${databases}" | while read -r database; do
+    cat <<EOF
+- name: ${database}
+  orgId: ${orgId}
+EOF
+  done
+}
+
+get_datasources_object() {
+  local datasource=${1}
+  local orgId=${2}
+
+  binding_name=$(jq -r '.binding_name' <<<"${datasource}")
+  databases=$(jq -r '.credentials.bound_databases' <<<"${datasource}")
+  url="$(echo ${influxdb_datasource} | jq -r '.credentials.url')"
+  username="$(echo ${influxdb_datasource} | jq -r '.credentials.username')"
+  password="$(echo ${influxdb_datasource} | jq -r '.credentials.password')"
+
+  jq -r '.[]' <<< "${databases}" | while read -r database; do
+    cat <<EOF
+- name: ${binding_name}-${database}
+  type: influxdb
+  access: proxy
+  url: ${url}
+  database: ${database}
+  user: ${username}
+  orgId: ${orgId}
+  secureJsonData:
+    password: ${password}
+EOF
+  done
+}
+

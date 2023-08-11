@@ -163,17 +163,13 @@ set_sql_databases() {
     fi
 }
 
+# TODO - handle multiple influxdb datasources.
 set_vcap_datasource_influxdb() {
   local datasource="${1}"
+  local orgId="1"
 
   local label=$(jq -r '.label' <<<"${datasource}")
   if [[ "${label}" = "csb-aws-influxdb" ]]; then
-
-    local name=$(jq -r '.name' <<<"${datasource}")
-    local database=$(jq -r '.credentials.bound_database' <<<"${datasource}")
-    local url=$(jq -r '.credentials.url' <<<"${datasource}")
-    local user=$(jq -r '.credentials.username' <<<"${datasource}")
-    local password=$(jq -r '.credentials.password' <<<"${datasource}")
 
     mkdir -p "${APP_ROOT}/datasources"
 
@@ -182,19 +178,10 @@ set_vcap_datasource_influxdb() {
 apiVersion: 1
 
 deleteDatasources:
-- name: ${name}
-  orgId: 1
+$(get_delete_datasources_object "${datasource}" "${orgId}")
 
 datasources:
-- name: ${name}
-  type: influxdb
-  access: proxy
-  url: ${url}
-  database: ${database}
-  user: ${user}
-  orgId: 1
-  secureJsonData:
-    password: ${password}
+$(get_datasources_object "${datasource}" "${orgId}")
 EOF
   fi
 }
@@ -222,7 +209,7 @@ set_vcap_datasource_prometheus() {
 	deleteDatasources:
 	- name: ${name}
 	  orgId: ${HOME_ORG_ID}
-	
+
 	# list of datasources to insert/update depending
 	# what's available in the database
 	datasources:
