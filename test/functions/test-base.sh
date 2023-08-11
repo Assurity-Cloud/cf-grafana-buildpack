@@ -24,15 +24,25 @@ test_get_binding_service() {
   "csb-aws-influxdb":[
     {
       "binding_name": "influxdb1",
-      "instance_name": "test-influxdb"
+      "instance_name": "test-influxdb-1"
+    },
+    {
+      "binding_name": "influxdb2",
+      "instance_name": "test-influxdb-2"
     }
   ]
 }
 EOF
-  local service=$(get_binding_service "${vcap_services}" influxdb1)
+  local serviceInstanceOne=$(get_binding_service "${vcap_services}" influxdb1)
   processExitCode=$?
   assertEquals 0 "${processExitCode}"
-  assertEquals "test-influxdb" "$(jq -r '.instance_name' <<<$service)"
+
+  local serviceInstanceTwo=$(get_binding_service "${vcap_services}" influxdb2)
+  processExitCode=$?
+  assertEquals 0 "${processExitCode}"
+
+  assertEquals "test-influxdb-1" "$(jq -r '.instance_name' <<<$serviceInstanceOne)"
+  assertEquals "test-influxdb-2" "$(jq -r '.instance_name' <<<$serviceInstanceTwo)"
 }
 
 test_is_aws_service_positive() {
