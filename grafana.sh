@@ -170,7 +170,8 @@ set_vcap_datasource_influxdb() {
 
   local label=$(jq -r '.label' <<<"${datasource}")
   if [[ "${label}" = "csb-aws-influxdb" ]]; then
-
+    
+    name=$(jq -r '.name' <<<"${datasource}")
     mkdir -p "${APP_ROOT}/datasources"
 
     # Be careful, this is a HERE doc with tabs indentation!!
