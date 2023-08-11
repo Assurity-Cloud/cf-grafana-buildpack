@@ -250,7 +250,7 @@ get_datasources_object() {
   local datasource=${1}
   local orgId=${2}
 
-  binding_name=$(jq -r '.binding_name' <<<"${datasource}")
+  name=$(jq -r '.name' <<<"${datasource}")
   databases=$(jq -r '.credentials.bound_databases' <<<"${datasource}")
   url="$(echo ${datasource} | jq -r '.credentials.url')"
   username="$(echo ${datasource} | jq -r '.credentials.username')"
@@ -258,7 +258,7 @@ get_datasources_object() {
 
   jq -r '.[]' <<< "${databases}" | while read -r database; do
     cat <<EOF
-- name: "${binding_name}-${database}"
+- name: "${name}-${database}"
   type: influxdb
   access: proxy
   url: "${url}"

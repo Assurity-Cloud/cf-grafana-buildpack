@@ -529,13 +529,13 @@ test_get_datasources_object() {
   datasource_binding="influxdb1"
   influxdb_datasource=$(get_binding_service "${VCAP_SERVICES}" "${datasource_binding}")
 
-  binding_name="$(echo ${influxdb_datasource} | jq -r '.binding_name')"
+  name="$(echo ${influxdb_datasource} | jq -r '.name')"
   expected_url="$(echo ${influxdb_datasource} | jq -r '.credentials.url')"
   expected_username="$(echo ${influxdb_datasource} | jq -r '.credentials.username')"
   expected_password="$(echo ${influxdb_datasource} | jq -r '.credentials.password')"
 
   read -r -d '' expected_datasources <<-EOF
-- name: "${binding_name}-dbOne"
+- name: "${name}-dbOne"
   type: influxdb
   access: proxy
   url: "${expected_url}"
@@ -544,7 +544,7 @@ test_get_datasources_object() {
   orgId: 1
   secureJsonData:
     password: "${expected_password}"
-- name: "${binding_name}-dbTwo"
+- name: "${name}-dbTwo"
   type: influxdb
   access: proxy
   url: "${expected_url}"
