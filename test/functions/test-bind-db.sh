@@ -513,9 +513,9 @@ test_get_delete_datasources_object() {
   influxdb_datasource=$(get_binding_service "${VCAP_SERVICES}" "${datasource_binding}")
 
   read -r -d '' expected_delete_datasources <<-EOF
-- name: dbOne
+- name: "dbOne"
   orgId: 1
-- name: dbTwo
+- name: "dbTwo"
   orgId: 1
 EOF
 
@@ -535,24 +535,24 @@ test_get_datasources_object() {
   expected_password="$(echo ${influxdb_datasource} | jq -r '.credentials.password')"
 
   read -r -d '' expected_datasources <<-EOF
-- name: ${binding_name}-dbOne
+- name: "${binding_name}-dbOne"
   type: influxdb
   access: proxy
-  url: ${expected_url}
-  database: dbOne
-  user: ${expected_username}
+  url: "${expected_url}"
+  database: "dbOne"
+  user: "${expected_username}"
   orgId: 1
   secureJsonData:
-    password: ${expected_password}
-- name: ${binding_name}-dbTwo
+    password: "${expected_password}"
+- name: "${binding_name}-dbTwo"
   type: influxdb
   access: proxy
-  url: ${expected_url}
-  database: dbTwo
-  user: ${expected_username}
+  url: "${expected_url}"
+  database: "dbTwo"
+  user: "${expected_username}"
   orgId: 1
   secureJsonData:
-    password: ${expected_password}
+    password: "${expected_password}"
 EOF
 
   actual_datasources=$(get_datasources_object "${influxdb_datasource}" "1")

@@ -240,7 +240,7 @@ get_delete_datasources_object() {
 
   jq -r '.[]' <<< "${databases}" | while read -r database; do
     cat <<EOF
-- name: ${database}
+- name: "${database}"
   orgId: ${orgId}
 EOF
   done
@@ -258,15 +258,15 @@ get_datasources_object() {
 
   jq -r '.[]' <<< "${databases}" | while read -r database; do
     cat <<EOF
-- name: ${binding_name}-${database}
+- name: "${binding_name}-${database}"
   type: influxdb
   access: proxy
-  url: ${url}
-  database: ${database}
-  user: ${username}
+  url: "${url}"
+  database: "${database}"
+  user: "${username}"
   orgId: ${orgId}
   secureJsonData:
-    password: ${password}
+    password: "${password}"
 EOF
   done
 }
