@@ -163,7 +163,6 @@ set_sql_databases() {
     fi
 }
 
-# TODO - handle multiple influxdb datasources.
 set_vcap_datasource_influxdb() {
   local datasource="${1}"
   local orgId="1"
