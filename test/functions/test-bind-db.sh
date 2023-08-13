@@ -535,7 +535,7 @@ test_get_datasources_object() {
   expected_password="$(echo ${influxdb_datasource} | jq -r '.credentials.password')"
 
   read -r -d '' expected_datasources <<-EOF
-- name: "${name}-dbOne"
+- name: "dbOne"
   type: influxdb
   access: proxy
   url: "${expected_url}"
@@ -544,7 +544,7 @@ test_get_datasources_object() {
   orgId: 1
   secureJsonData:
     password: "${expected_password}"
-- name: "${name}-dbTwo"
+- name: "dbTwo"
   type: influxdb
   access: proxy
   url: "${expected_url}"
