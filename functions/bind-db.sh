@@ -258,7 +258,7 @@ get_datasources_object() {
 
   jq -r '.[]' <<< "${databases}" | while read -r database; do
     cat <<EOF
-- name: "${name}-${database}"
+- name: "${database}"
   type: influxdb
   access: proxy
   url: "${url}"
