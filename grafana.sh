@@ -179,6 +179,8 @@ apiVersion: 1
 
 deleteDatasources:
 $(get_delete_datasources_object "${datasource}" "${orgId}")
+- name: influxdb
+  orgId: ${HOME_ORG_ID}
 
 datasources:
 $(get_datasources_object "${datasource}" "${orgId}")
@@ -209,8 +211,6 @@ set_vcap_datasource_prometheus() {
 	deleteDatasources:
 	- name: ${name}
 	  orgId: ${HOME_ORG_ID}
-  - name: influxdb
-    orgId: ${HOME_ORG_ID}
 	# list of datasources to insert/update depending
 	# what's available in the database
 	datasources:
