@@ -542,6 +542,8 @@ test_get_datasources_object() {
   database: "dbOne"
   user: "${expected_username}"
   orgId: 1
+  readOnly: false
+  editable: true
   secureJsonData:
     password: "${expected_password}"
 - name: "dbTwo"
@@ -551,6 +553,8 @@ test_get_datasources_object() {
   database: "dbTwo"
   user: "${expected_username}"
   orgId: 1
+  readOnly: false
+  editable: true
   secureJsonData:
     password: "${expected_password}"
 EOF

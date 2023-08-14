@@ -265,6 +265,8 @@ get_datasources_object() {
   database: "${database}"
   user: "${username}"
   orgId: ${orgId}
+  readOnly: false
+  editable: true
   secureJsonData:
     password: "${password}"
 EOF
