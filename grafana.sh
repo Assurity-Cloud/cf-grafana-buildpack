@@ -179,6 +179,8 @@ apiVersion: 1
 
 deleteDatasources:
 $(get_delete_datasources_object "${datasource}" "${orgId}")
+- name: influxdb
+  orgId: ${HOME_ORG_ID}
 
 datasources:
 $(get_datasources_object "${datasource}" "${orgId}")
