@@ -52,22 +52,53 @@ EOF
         "preview"
       ],
       "instance_guid": "22f79fd5-4e7d-4b4e-9a16-51e89e1f0ba0",
-      "instance_name": "test-influxdb",
+      "instance_name": "test-influxdb-1",
       "binding_guid": "4f7010ff-d6b5-4d50-8810-36d518616c87",
       "binding_name": "influxdb1",
       "credentials": {
-        "admin_password": "test_admin_pw",
-        "admin_username": "test_admin_user",
-        "bound_database": "db",
-        "databases": "[\"db\"]",
-        "default_database": "db",
-        "hostname": "test.csb.service",
-        "password": "test_pw",
+        "admin_password": "REDACTED",
+        "admin_username": "REDACTED",
+        "bound_databases": "[\"dbOne\", \"dbTwo\"]",
+        "databases": "[\"dbOne\", \"dbTwo\"]",
+        "default_database": "dbOne",
+        "hostname": "test-influxdb1.csb.service",
+        "password": "test_pw1",
         "port": 443,
         "protocol": "HTTPS",
         "retention_policies": "{}",
-        "url": "HTTPS://test.csb.service:443",
-        "username": "test_user"
+        "url": "HTTPS://test-influxdb1.csb.service:443",
+        "username": "test_user_1"
+      },
+      "syslog_drain_url": null,
+      "volume_mounts": []
+    },
+    {
+      "label": "csb-aws-influxdb",
+      "provider": null,
+      "plan": "default",
+      "name": "influxdb2",
+      "tags": [
+        "aws",
+        "influxdb",
+        "preview"
+      ],
+      "instance_guid": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+      "instance_name": "test-influxdb-2",
+      "binding_guid": "1a5e9f43-2d9e-4b31-b72f-6b2c8b05e8d0",
+      "binding_name": "influxdb2",
+      "credentials": {
+        "admin_password": "REDACTED",
+        "admin_username": "REDACTED",
+        "bound_databases": "[\"dbThree\", \"dbFour\"]",
+        "databases": "[\"dbThree\", \"dbFour\"]",
+        "default_database": "dbThree",
+        "hostname": "test-influxdb2.csb.service",
+        "password": "test_pw2",
+        "port": 443,
+        "protocol": "HTTPS",
+        "retention_policies": "{}",
+        "url": "HTTPS://test-influxdb2.csb.service:443",
+        "username": "test_user_2"
       },
       "syslog_drain_url": null,
       "volume_mounts": []
@@ -473,6 +504,60 @@ EOF
   local db_cert_name=$(get_db_cert_name "${service}")
   assertTrue $?
   assertEquals "instance" "${db_cert_name}"
+}
+
+
+
+test_get_delete_datasources_object() {
+  datasource_binding="influxdb1"
+  influxdb_datasource=$(get_binding_service "${VCAP_SERVICES}" "${datasource_binding}")
+
+  read -r -d '' expected_delete_datasources <<-EOF
+- name: "dbOne"
+  orgId: 1
+- name: "dbTwo"
+  orgId: 1
+EOF
+
+  actual_delete_datasources=$(get_delete_datasources_object "${influxdb_datasource}" "1")
+  assertTrue $?
+  assertEquals "${expected_delete_datasources}" "${actual_delete_datasources}"
+}
+
+
+test_get_datasources_object() {
+  datasource_binding="influxdb1"
+  influxdb_datasource=$(get_binding_service "${VCAP_SERVICES}" "${datasource_binding}")
+
+  name="$(echo ${influxdb_datasource} | jq -r '.name')"
+  expected_url="$(echo ${influxdb_datasource} | jq -r '.credentials.url')"
+  expected_username="$(echo ${influxdb_datasource} | jq -r '.credentials.username')"
+  expected_password="$(echo ${influxdb_datasource} | jq -r '.credentials.password')"
+
+  read -r -d '' expected_datasources <<-EOF
+- name: "dbOne"
+  type: influxdb
+  access: proxy
+  url: "${expected_url}"
+  database: "dbOne"
+  user: "${expected_username}"
+  orgId: 1
+  secureJsonData:
+    password: "${expected_password}"
+- name: "dbTwo"
+  type: influxdb
+  access: proxy
+  url: "${expected_url}"
+  database: "dbTwo"
+  user: "${expected_username}"
+  orgId: 1
+  secureJsonData:
+    password: "${expected_password}"
+EOF
+
+  actual_datasources=$(get_datasources_object "${influxdb_datasource}" "1")
+  assertTrue $?
+  assertEquals "${expected_datasources}" "${actual_datasources}"
 }
 
 # Run tests by sourcing shunit2
