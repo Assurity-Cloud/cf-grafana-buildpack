@@ -54,6 +54,7 @@ export DB_TLS=""
 source functions/generate-alerts.sh
 source functions/pre-process.sh
 source functions/bind-db.sh
+source functions/post-process.sh
 
 ###
 
@@ -393,49 +394,6 @@ set_homedashboard() {
 
 }
 
-set_users() {
-    if [[ -d "${GRAFANA_USER_CONFIG_ROOT}" ]]
-    then
-        for user_config_file in "${GRAFANA_USER_CONFIG_ROOT}/*.yml"
-        do
-            for user in  $(yq eval -o=j -I=0 '.users[]' ${user_config_file})
-            do
-                name=$(eval "echo $(echo $user | jq '.name')")
-                login=$(eval "echo $(echo $user | jq '.login')")
-                password=$(eval "echo $(echo $user | jq '.password')")
-                email=$(eval "echo $(echo $user | jq '.email')")
-                orgId=$(eval "echo $(echo $user | jq '.orgId')")
-                role=$(eval "echo $(echo $user | jq '.role')")
-
-                echo "Add user - name: ${name}, login: ${login}, email: ${email}, orgId: ${orgId}"
-                curl -s -H "Content-Type: application/json" \
-                     -u "${ADMIN_USER}:${ADMIN_PASS}" \
-                    -XPOST "http://127.0.0.1:${PORT}/api/admin/users" \
-                    -d @- <<EOF
-{
-    "name":"${name}",
-    "login":"${login}",
-    "password":"${password}",
-    "email":"${email}",
-    "orgId":${orgId}
-}
-EOF
-
-                echo "Associate user ${login} with org ${orgId} and role ${role}"
-                curl -s -H "Content-Type: application/json" \
-                     -u "${ADMIN_USER}:${ADMIN_PASS}" \
-                    -XPOST "http://127.0.0.1:${PORT}/api/orgs/${orgId}/users" \
-                    -d @- <<EOF
-{
-    "loginOrEmail":"${login}",
-    "role":"${role}"
-}
-EOF
-            done
-        done
-    fi
-}
-
 configure_post_startup() {
     local counter=30
     local status=0
@@ -454,7 +412,7 @@ configure_post_startup() {
     done
     if [[ ${status} -eq 200 ]]
     then
-        set_users
+        set_users "${GRAFANA_USER_CONFIG_ROOT}"
         set_homedashboard
     else
         echo "Error setting querying preferences to determine grafana application startup: ${status}"
