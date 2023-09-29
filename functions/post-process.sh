@@ -45,7 +45,7 @@ set_users() {
       for user_config_file in *.yml
       do
         if [[ -f $user_config_file ]]; then
-          for user in  $(yq eval -o=j -I=0 '.users[]' ${user_config_file})
+          for user in  $(yq -o=j -I=0 '.users[]' ${user_config_file})
           do
             name=$(jq -r '.name' <<< "${user}")
             login=$(jq -r '.login' <<< "${user}")
