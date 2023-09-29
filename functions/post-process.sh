@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+set -e pipefail
 
 send_user_config_to_grafana() {
     name=${1}
@@ -45,12 +47,12 @@ set_users() {
         if [[ -f $user_config_file ]]; then
           for user in  $(yq eval -o=j -I=0 '.users[]' ${user_config_file})
           do
-            name=$(eval "echo $(echo $user | jq '.name')")
-            login=$(eval "echo $(echo $user | jq '.login')")
-            password=$(eval "echo $(echo $user | jq '.password')")
-            email=$(eval "echo $(echo $user | jq '.email')")
-            orgId=$(eval "echo $(echo $user | jq '.orgId')")
-            role=$(eval "echo $(echo $user | jq '.role')")
+            name=$(jq -r '.name' <<< "${user}")
+            login=$(jq -r '.login' <<< "${user}")
+            password=$(jq -r '.password' <<< "${user}" )
+            email=$(jq -r '.email' <<< "${user}")
+            orgId=$(jq -r '.orgId' <<< "${user}")
+            role=$(jq -r '.role' <<< "${user}")
 
             send_user_config_to_grafana "${name}" "${login}" "${password}" "${email}" "${orgId}" "${role}"
           done
