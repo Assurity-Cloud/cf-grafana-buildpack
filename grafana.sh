@@ -54,6 +54,7 @@ export DB_TLS=""
 source functions/generate-alerts.sh
 source functions/pre-process.sh
 source functions/bind-db.sh
+source functions/bind-data-source.sh
 source functions/post-process.sh
 
 ###
