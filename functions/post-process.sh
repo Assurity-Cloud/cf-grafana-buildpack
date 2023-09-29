@@ -46,15 +46,15 @@ set_users() {
       do
         if [[ -f $user_config_file ]]; then
           echo "Creating users from $user_config_file"
-          for user in  $(yq -o=j -I=0 '.users[]' ${user_config_file})
+          for user in  $(yq -o=j -I=0 '.users[]' "${user_config_file}")
           do
             echo "User: $user"
-            name=$(eval "echo $(jq -r '.name' <<< "${user}")")
-            login=$(eval "echo $(jq -r '.login' <<< "${user}")")
-            password=$(eval "echo $(jq -r '.password' <<< "${user}")")
-            email=$(eval "echo $(jq -r '.email' <<< "${user}")")
-            orgId=$(eval "echo $(jq -r '.orgId' <<< "${user}")")
-            role=$(eval "echo $(jq -r '.role' <<< "${user}")")
+            name=$(eval "echo $(jq '.name' <<< "${user}")")
+            login=$(eval "echo $(jq '.login' <<< "${user}")")
+            password=$(eval "echo $(jq '.password' <<< "${user}")")
+            email=$(eval "echo $(jq '.email' <<< "${user}")")
+            orgId=$(eval "echo $(jq '.orgId' <<< "${user}")")
+            role=$(eval "echo $(jq '.role' <<< "${user}")")
 
             send_user_config_to_grafana "${name}" "${login}" "${password}" "${email}" "${orgId}" "${role}"
           done
