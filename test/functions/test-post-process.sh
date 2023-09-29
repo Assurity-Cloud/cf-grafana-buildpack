@@ -27,30 +27,33 @@ curl() {
 }
 
 test_set_users() {
+  export BOB_NAME="bob"
+  export BOB_PASSWORD="bob1"
+  export BOB_EMAIL="bob@bob.com"
   cat <<EOF > ${ROOT}/users/users.yml
 users:
-  - name: "bob"
-    login: "bobby"
-    password: "bob1"
-    email: "bob@bob.com"
+  - name: "${BOB_NAME}"
+    login: "${BOB_NAME}"
+    password: "${BOB_PASSWORD}"
+    email: "${BOB_EMAIL}"
     orgId: 1
     role: "Viewer"
 EOF
-
-  set_users "${ROOT}/users"
   read -r -d '' expected_sent_data << EOF
 {
 "name":"bob",
-"login":"bobby",
+"login":"bob",
 "password":"bob1",
 "email":"bob@bob.com",
 "orgId":1
 }
 {
-"loginOrEmail":"bobby",
+"loginOrEmail":"bob",
 "role":"Viewer"
 }
 EOF
+
+  set_users "${ROOT}/users"
   assertEquals "${expected_sent_data}" "$(cat "${ROOT}/sent.json")"
 }
 
