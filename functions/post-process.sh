@@ -49,7 +49,7 @@ set_users() {
           do
             name=$(jq -r '.name' <<< "${user}")
             login=$(jq -r '.login' <<< "${user}")
-            password=$(jq -r '.password' <<< "${user}" )
+            password=$(jq -r '.password' <<< "${user}")
             email=$(jq -r '.email' <<< "${user}")
             orgId=$(jq -r '.orgId' <<< "${user}")
             role=$(jq -r '.role' <<< "${user}")
