@@ -30,11 +30,10 @@ get_datasources_object() {
   local datasource=${1}
   local orgId=${2}
 
-  name=$(jq -r '.name' <<<"${datasource}")
   databases=$(jq -r '.credentials.bound_databases' <<<"${datasource}")
-  url="$(echo ${datasource} | jq -r '.credentials.url')"
-  username="$(echo ${datasource} | jq -r '.credentials.username')"
-  password="$(echo ${datasource} | jq -r '.credentials.password')"
+  url="$(jq -r '.credentials.url' <<<"${datasource}")"
+  username="$(jq -r '.credentials.username' <<<"${datasource}")"
+  password="$(jq -r '.credentials.password' <<<"${datasource}")"
 
   jq -r '.[]' <<< "${databases}" | while read -r database; do
     cat <<EOF
