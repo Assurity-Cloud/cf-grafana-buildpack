@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e pipefail
+set -euo pipefail
 
 send_user_config_to_grafana() {
     name=${1}

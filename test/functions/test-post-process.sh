@@ -11,7 +11,7 @@ setUp() {
   ROOT=$PWD/tmp
   mkdir -p "${ROOT}/users"
   source functions/post-process.sh
-  set +e
+  set +eu
 }
 
 tearDown() {
