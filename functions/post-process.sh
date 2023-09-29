@@ -45,14 +45,16 @@ set_users() {
       for user_config_file in *.yml
       do
         if [[ -f $user_config_file ]]; then
+          echo "Creating users from $user_config_file"
           for user in  $(yq -o=j -I=0 '.users[]' ${user_config_file})
           do
-            name=$(jq -r '.name' <<< "${user}")
-            login=$(jq -r '.login' <<< "${user}")
-            password=$(jq -r '.password' <<< "${user}")
-            email=$(jq -r '.email' <<< "${user}")
-            orgId=$(jq -r '.orgId' <<< "${user}")
-            role=$(jq -r '.role' <<< "${user}")
+            echo "User: $user"
+            name=$(eval "echo $(jq -r '.name' <<< "${user}")")
+            login=$(eval "echo $(jq -r '.login' <<< "${user}")")
+            password=$(eval "echo $(jq -r '.password' <<< "${user}")")
+            email=$(eval "echo $(jq -r '.email' <<< "${user}")")
+            orgId=$(eval "echo $(jq -r '.orgId' <<< "${user}")")
+            role=$(eval "echo $(jq -r '.role' <<< "${user}")")
 
             send_user_config_to_grafana "${name}" "${login}" "${password}" "${email}" "${orgId}" "${role}"
           done

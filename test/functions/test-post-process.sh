@@ -32,10 +32,10 @@ test_set_users() {
   export BOB_EMAIL="bob@bob.com"
   cat <<EOF > ${ROOT}/users/users.yml
 users:
-  - name: "${BOB_NAME}"
-    login: "${BOB_NAME}"
-    password: "${BOB_PASSWORD}"
-    email: "${BOB_EMAIL}"
+  - name: "\${BOB_NAME}"
+    login: "\${BOB_NAME}"
+    password: "\${BOB_PASSWORD}"
+    email: "\${BOB_EMAIL}"
     orgId: 1
     role: "Viewer"
 EOF
@@ -54,6 +54,7 @@ EOF
 EOF
 
   set_users "${ROOT}/users"
+  assertTrue $?
   assertEquals "${expected_sent_data}" "$(cat "${ROOT}/sent.json")"
 }
 
