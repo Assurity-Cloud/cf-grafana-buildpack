@@ -45,7 +45,7 @@ set_users() {
       for user_config_file in *.yml
       do
         if [[ -f $user_config_file ]]; then
-          for user in  $(yq -o=json -I=0 '.users[]' "${user_config_file}")
+          for user in  $(yq eval -o=json -I=0 '.users[]' "${user_config_file}")
           do
             echo "User: $user"
             name=$(eval "echo $(jq '.name' <<< "${user}")")
