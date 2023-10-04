@@ -45,8 +45,16 @@ set_users() {
       for user_config_file in *.yml
       do
         set -x # FIXME
-        if [[ -f $user_config_file ]]; then
-          for user in  $(yq eval -o=json -I=0 '.users[]' "${user_config_file}")
+        echo "root_dir is ${root_dir}"
+        echo "user_config_file is ${user_config_file}"
+        yq --version
+        pwd
+        echo  "running yq eval test..."
+        yq eval -o=json -I=0 '.users[]' "${user_config_file}"
+        echo  "end of yq eval test..."
+
+        if [[ -f "${user_config_file}" ]]; then
+          for user in $(yq eval -o=json -I=0 '.users[]' "${user_config_file}")
           do
             echo "User: $user"
             name=$(eval "echo $(jq '.name' <<< "${user}")")
