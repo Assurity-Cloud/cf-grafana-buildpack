@@ -9,7 +9,7 @@ run_scripts() {
       for script in *.sh
       do
         if [[ -f $script ]]; then
-           "${script}"
+           ./"${script}"
         fi
       done
     popd
