@@ -9,8 +9,7 @@ run_scripts() {
       for script in *.sh
       do
         if [[ -f $script ]]; then
-          # "${script}"
-          echo "FIXME - script to be run here..."
+           "${script}"
         fi
       done
     popd
