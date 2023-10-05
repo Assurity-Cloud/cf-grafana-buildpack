@@ -56,6 +56,9 @@ set_users() {
         if [[ -f "${user_config_file}" ]]; then
           for user in $(yq eval -o=json -I=0 '.users[]' "${user_config_file}")
           do
+            echo "user is..."
+            echo ${user}
+            echo "user was above..."
             echo "User: $user"
             name=$(eval "echo $(jq '.name' <<< "${user}")")
             login=$(eval "echo $(jq '.login' <<< "${user}")")
