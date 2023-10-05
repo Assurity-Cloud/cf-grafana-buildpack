@@ -33,12 +33,17 @@ replace_headers_with_data() {
   data_file=$1
   files_to_change=$2
 
+  set -x # FIXME
   headers=$(head -n 1 ${data_file})
   original_ifs=$IFS
   IFS=','
   header_array=($headers)
   IFS=$original_ifs
   header_length=${#header_array[@]}
+  echo "IFS is... ${IFS}"
+  unset IFS
+  echo "IFS is... ${IFS}"
+  set +x # FIXME
 
   for (( header_pos=0; header_pos<header_length; header_pos++ )); do
     header="${header_array[$header_pos]}"
