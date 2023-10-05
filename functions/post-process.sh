@@ -54,6 +54,8 @@ set_users() {
         echo  "running yq eval test..."
         yq eval -o=json -I=0 '.users[]' "${user_config_file}"
         echo  "end of yq eval test..."
+        echo "IFS is... ${IFS}"
+        echo "$IFS" | cat -et
 
         if [[ -f "${user_config_file}" ]]; then
           for user in $(yq eval -o=json -I=0 '.users[]' "${user_config_file}")
