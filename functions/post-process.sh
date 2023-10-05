@@ -65,10 +65,7 @@ set_users() {
             email=$(eval "echo $(jq '.email' <<< "${user}")")
             orgId=$(eval "echo $(jq '.orgId' <<< "${user}")")
             role=$(eval "echo $(jq '.role' <<< "${user}")")
-
-            echo $name
-
-#            send_user_config_to_grafana "${name}" "${login}" "${password}" "${email}" "${orgId}" "${role}"
+            send_user_config_to_grafana "${name}" "${login}" "${password}" "${email}" "${orgId}" "${role}"
           done
         fi
         set +x # FIXME

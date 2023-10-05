@@ -34,7 +34,10 @@ replace_headers_with_data() {
   files_to_change=$2
 
   headers=$(head -n 1 ${data_file})
-  IFS=$','; header_array=($headers); unset IFS;
+  original_ifs=$IFS
+  IFS=','
+  header_array=($headers)
+  IFS=$original_ifs
   header_length=${#header_array[@]}
 
   for (( header_pos=0; header_pos<header_length; header_pos++ )); do
