@@ -44,21 +44,8 @@ set_users() {
     pushd ${root_dir}
       for user_config_file in *.yml
       do
-        set -x # FIXME
-        echo "$SHELL"
-        bash --version
-        echo "root_dir is ${root_dir}"
-        echo "user_config_file is ${user_config_file}"
-        yq --version
-        pwd
-        echo  "running yq eval test..."
-        yq eval -o=json -I=0 '.users[]' "${user_config_file}"
-        echo  "end of yq eval test..."
-        echo "IFS is... ${IFS}"
-        echo "$IFS" | cat -et
-
-        if [[ -f "${user_config_file}" ]]; then
-          for user in $(yq eval -o=json -I=0 '.users[]' "${user_config_file}")
+        if [[ -f $user_config_file ]]; then
+          for user in  $(yq -o=json -I=0 '.users[]' "${user_config_file}")
           do
             echo "User: $user"
             name=$(eval "echo $(jq '.name' <<< "${user}")")
@@ -67,10 +54,10 @@ set_users() {
             email=$(eval "echo $(jq '.email' <<< "${user}")")
             orgId=$(eval "echo $(jq '.orgId' <<< "${user}")")
             role=$(eval "echo $(jq '.role' <<< "${user}")")
+
             send_user_config_to_grafana "${name}" "${login}" "${password}" "${email}" "${orgId}" "${role}"
           done
         fi
-        set +x # FIXME
       done
     popd
   fi
