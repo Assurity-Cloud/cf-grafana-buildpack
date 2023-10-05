@@ -54,6 +54,8 @@ export DB_TLS=""
 source functions/generate-alerts.sh
 source functions/pre-process.sh
 source functions/bind-db.sh
+source functions/bind-data-source.sh
+source functions/post-process.sh
 
 ###
 
@@ -84,16 +86,6 @@ random_string() {
         cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-32} | head -n 1 || true
     )
 }
-
-get_influxdb_vcap_service() {
-    jq '[.[][] | select(.label=="csb-aws-influxdb") ] | first | select (.!=null)' <<<"${VCAP_SERVICES}"
-}
-
-get_prometheus_vcap_service() {
-    # search for a sql service looking at the label
-    jq '[.[][] | select(.credentials.prometheus) ] | first | select (.!=null)' <<<"${VCAP_SERVICES}"
-}
-
 
 reset_env_DB() {
     DB_TYPE="sqlite3"
@@ -161,148 +153,6 @@ set_sql_databases() {
         set_env_DB "${db}" >/dev/null
         set_DB_proxy "${db}" >/dev/null
     fi
-}
-
-set_vcap_datasource_influxdb() {
-  local datasource="${1}"
-  local orgId="1"
-
-  local label=$(jq -r '.label' <<<"${datasource}")
-  if [[ "${label}" = "csb-aws-influxdb" ]]; then
-
-    name=$(jq -r '.name' <<<"${datasource}")
-    mkdir -p "${APP_ROOT}/datasources"
-
-    # Be careful, this is a HERE doc with tabs indentation!!
-    cat <<-EOF > "${APP_ROOT}/datasources/${name}.yml"
-apiVersion: 1
-
-deleteDatasources:
-$(get_delete_datasources_object "${datasource}" "${orgId}")
-- name: influxdb
-  orgId: ${HOME_ORG_ID}
-
-datasources:
-$(get_datasources_object "${datasource}" "${orgId}")
-EOF
-  fi
-}
-
-set_vcap_datasource_prometheus() {
-  local datasource="${1}"
-
-  local label=$(jq -r '.label' <<<"${datasource}")
-  if [[ "${label}" != "csb-aws-influxdb" ]]; then
-
-    local name=$(jq -r '.name' <<<"${datasource}")
-    local user=$(jq -r '.credentials.prometheus.user | select (.!=null)' <<<"${datasource}")
-    local pass=$(jq -r '.credentials.prometheus.password | select (.!=null)' <<<"${datasource}")
-    local url=$(jq -r '.credentials.prometheus.url' <<<"${datasource}")
-    local auth="true"
-
-    [[ -z "${user}" ]] && auth="false"
-    mkdir -p "${APP_ROOT}/datasources"
-
-    # Be careful, this is a HERE doc with tabs indentation!!
-    cat <<-EOF > "${APP_ROOT}/datasources/${HOME_ORG_ID}-${name}.yml"
-	apiVersion: 1
-	
-	# list of datasources that should be deleted from the database
-	deleteDatasources:
-	- name: ${name}
-	  orgId: ${HOME_ORG_ID}
-
-	# list of datasources to insert/update depending
-	# what's available in the database
-	datasources:
-	- name: ${name}
-	  type: prometheus
-	  access: proxy
-	  orgId: ${HOME_ORG_ID}
-	  url: "${url}"
-	  basicAuth: ${auth}
-	  basicAuthUser: ${user}
-	  jsonData:
-	    timeInterval: "${DEFAULT_DATASOURCE_TIMEINTERVAL}"
-	  secureJsonData:
-	    basicAuthPassword: ${pass}
-	  withCredentials: false
-	  isDefault: true
-	  editable: ${DEFAULT_DATASOURCE_EDITABLE}
-	EOF
-	fi
-}
-
-
-set_vcap_datasource_alertmanager() {
-    local datasource="${1}"
-
-    local label=$(jq -r '.label' <<<"${datasource}")
-    local name=$(jq -r '.name' <<<"${datasource}")
-    local user=$(jq -r '.credentials.prometheus.user | select (.!=null)' <<<"${datasource}")
-    local pass=$(jq -r '.credentials.prometheus.password | select (.!=null)' <<<"${datasource}")
-    local url=$(jq -r '.credentials.alertmanager.url' <<<"${datasource}")
-    local auth="true"
-
-    [[ -z "${user}" ]] && auth="false"
-    mkdir -p "${APP_ROOT}/datasources"
-
-    # Be careful, this is a HERE doc with tabs indentation!!
-    cat <<-EOF > "${APP_ROOT}/datasources/${HOME_ORG_ID}-${name}-alertmanager.yml"
-	apiVersion: 1
-	
-	# list of datasources to insert/update depending
-	# what's available in the database
-	datasources:
-	- name: ${name} AlertManager
-	  type: camptocamp-prometheus-alertmanager-datasource
-	  access: proxy
-	  orgId: ${HOME_ORG_ID}
-	  url: "${url}"
-	  basicAuth: ${auth}
-	  basicAuthUser: ${user}
-	  secureJsonData:
-	    basicAuthPassword: ${pass}
-	  withCredentials: false
-	  isDefault: false
-	  editable: ${DEFAULT_DATASOURCE_EDITABLE}
-	EOF
-
-    echo "Installing camptocamp-prometheus-alertmanager-datasource ${GRAFANA_ALERTMANAGER_VERSION} ..."
-    grafana-cli --pluginsDir "$GF_PATHS_PLUGINS" plugins install camptocamp-prometheus-alertmanager-datasource ${GRAFANA_ALERTMANAGER_VERSION}
-}
-
-set_datasource() {
-  datasource="${1}"
-  local alertmanager_prometheus_exists
-
-  if [[ -n "${datasource}" ]]; then
-    echo "Setting datasource ${datasource}"
-
-    set_vcap_datasource_prometheus "${datasource}"
-    set_vcap_datasource_influxdb "${datasource}"
-
-    # Check if AlertManager for the Prometheus service instance has been enabled by the user first
-    # before installing the AlertManager Grafana plugin and configuring the AlertManager Grafana datasource
-    alertmanager_prometheus_exists=$(jq -r '.credentials.alertmanager.url' <<<"${datasource}")
-    if [[ -n "${alertmanager_prometheus_exists}" ]] && [[ "${alertmanager_prometheus_exists}" != "null" ]]
-    then
-        set_vcap_datasource_alertmanager "${datasource}"
-    fi
-  fi
-}
-
-set_datasources() {
-  if [[ -z ${DATASOURCE_BINDING_NAMES} ]]; then
-    echo "No datasource binding names set, looking for prometheus or influxdb config"
-    set_datasource "$(get_prometheus_vcap_service)"
-    set_datasource "$(get_influxdb_vcap_service)"
-  else
-    for datasource_binding in ${DATASOURCE_BINDING_NAMES//,/ }; do
-      echo "Retrieving binding service for ${datasource_binding}"
-      set_datasource "$(get_binding_service "${VCAP_SERVICES}" "${datasource_binding}")"
-    done
-  fi
 }
 
 set_seed_secrets() {
@@ -393,49 +243,6 @@ set_homedashboard() {
 
 }
 
-set_users() {
-    if [[ -d "${GRAFANA_USER_CONFIG_ROOT}" ]]
-    then
-        for user_config_file in "${GRAFANA_USER_CONFIG_ROOT}/*.yml"
-        do
-            for user in  $(yq eval -o=j -I=0 '.users[]' ${user_config_file})
-            do
-                name=$(eval "echo $(echo $user | jq '.name')")
-                login=$(eval "echo $(echo $user | jq '.login')")
-                password=$(eval "echo $(echo $user | jq '.password')")
-                email=$(eval "echo $(echo $user | jq '.email')")
-                orgId=$(eval "echo $(echo $user | jq '.orgId')")
-                role=$(eval "echo $(echo $user | jq '.role')")
-
-                echo "Add user - name: ${name}, login: ${login}, email: ${email}, orgId: ${orgId}"
-                curl -s -H "Content-Type: application/json" \
-                     -u "${ADMIN_USER}:${ADMIN_PASS}" \
-                    -XPOST "http://127.0.0.1:${PORT}/api/admin/users" \
-                    -d @- <<EOF
-{
-    "name":"${name}",
-    "login":"${login}",
-    "password":"${password}",
-    "email":"${email}",
-    "orgId":${orgId}
-}
-EOF
-
-                echo "Associate user ${login} with org ${orgId} and role ${role}"
-                curl -s -H "Content-Type: application/json" \
-                     -u "${ADMIN_USER}:${ADMIN_PASS}" \
-                    -XPOST "http://127.0.0.1:${PORT}/api/orgs/${orgId}/users" \
-                    -d @- <<EOF
-{
-    "loginOrEmail":"${login}",
-    "role":"${role}"
-}
-EOF
-            done
-        done
-    fi
-}
-
 configure_post_startup() {
     local counter=30
     local status=0
@@ -454,7 +261,7 @@ configure_post_startup() {
     done
     if [[ ${status} -eq 200 ]]
     then
-        set_users
+        set_users "${GRAFANA_USER_CONFIG_ROOT}"
         set_homedashboard
     else
         echo "Error setting querying preferences to determine grafana application startup: ${status}"
