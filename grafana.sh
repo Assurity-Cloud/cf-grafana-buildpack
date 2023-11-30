@@ -26,7 +26,7 @@ export DB_BINDING_NAME="${DB_BINDING_NAME:-}"
 
 # Exported variables used in default.ini config file
 export DOMAIN=${DOMAIN:-$(jq -r '.uris[0]' <<<"${VCAP_APPLICATION}")}
-export URL="${URL:-http://$DOMAIN/}"
+export URL="${URL:-https://$DOMAIN/}"
 export HOME_DASHBOARD_UID="${HOME_DASHBOARD_UID:-home}"
 export HOME_ORG_ID="${HOME_ORG_ID:-1}"
 export ADMIN_USER="${ADMIN_USER:-${GF_SECURITY_ADMIN_USER:-admin}}"
